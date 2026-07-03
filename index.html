@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Webeder 3D Hero</title>
+<title>Webeder — From Local to Digital</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
     width: 100%; height: 100%; overflow: hidden;
-    background: radial-gradient(ellipse at 50% 40%, #1a1a12 0%, #0c0c08 55%, #050503 100%);
-    font-family: 'Outfit', 'DM Sans', system-ui, sans-serif;
+    background: radial-gradient(ellipse at 50% 45%, #12131c 0%, #0a0b12 55%, #05060a 100%);
+    font-family: system-ui, sans-serif;
   }
   #scene { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
   #loader {
@@ -41,281 +41,353 @@
 
   <script type="module">
   import * as THREE from 'three';
-  import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
   import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
   import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
   import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-  // ---- Palette (matches Webeder brand) ----
-  const GOLD = 0xD4A573;
+  // ---------- Palette (Webeder brand) ----------
+  const GOLD      = 0xD4A573;
   const GOLD_DEEP = 0xb8860b;
-  const CYAN = 0x3fe0ff;
+  const WARM      = 0xffb45a;
+  const CYAN      = 0x3fe0ff;
   const CYAN_SOFT = 0x2ec9ff;
+  const BG        = 0x05060a;
 
   const canvas = document.getElementById('scene');
   const loaderEl = document.getElementById('loader');
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setClearColor(0x060604, 1);
+  renderer.setClearColor(BG, 1);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.1;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x060604, 0.028);
+  scene.fog = new THREE.FogExp2(BG, 0.032);
 
-  const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-  const CAM_BASE = new THREE.Vector3(0, 1.1, 8.2);
+  const camera = new THREE.PerspectiveCamera(43, 1, 0.1, 100);
+  const CAM_BASE = new THREE.Vector3(0, 1.4, 9.2);
   camera.position.copy(CAM_BASE);
-  camera.lookAt(0, 0.6, 0);
+  const LOOK = new THREE.Vector3(0, 0.9, 0);
+  camera.lookAt(LOOK);
 
-  // ---- Lighting: warm gold + cool blue volumetric-style ----
-  scene.add(new THREE.AmbientLight(0x2a2620, 0.9));
+  // ---------- Lighting: warm gold (left/physical) + cool cyan (right/digital) ----------
+  scene.add(new THREE.AmbientLight(0x1c2030, 0.9));
 
-  const keyLight = new THREE.SpotLight(0xffd9a0, 90, 40, Math.PI / 5, 0.5, 1.4);
-  keyLight.position.set(5, 8, 5);
-  keyLight.target.position.set(0, 0, 0);
-  scene.add(keyLight, keyLight.target);
+  const warmSpot = new THREE.SpotLight(WARM, 120, 45, Math.PI / 5, 0.55, 1.3);
+  warmSpot.position.set(-6, 7, 5);
+  warmSpot.target.position.set(-3.4, 0.5, 0);
+  scene.add(warmSpot, warmSpot.target);
 
-  const rimLight = new THREE.SpotLight(CYAN, 60, 40, Math.PI / 4, 0.6, 1.2);
-  rimLight.position.set(-6, 4, -3);
-  rimLight.target.position.set(0, 1.5, 0);
-  scene.add(rimLight, rimLight.target);
+  const coolSpot = new THREE.SpotLight(CYAN, 100, 45, Math.PI / 5, 0.6, 1.2);
+  coolSpot.position.set(6, 7, 4);
+  coolSpot.target.position.set(3.6, 1.2, 0);
+  scene.add(coolSpot, coolSpot.target);
 
-  const fillLight = new THREE.PointLight(0xffb060, 12, 25, 2);
-  fillLight.position.set(0, 0.5, 4);
-  scene.add(fillLight);
+  const keyGlowLight = new THREE.PointLight(GOLD, 8, 10, 2);
+  keyGlowLight.position.set(0, 1.1, 0.6);
+  scene.add(keyGlowLight);
 
-  const holoPointLight = new THREE.PointLight(CYAN, 6, 12, 2);
-  holoPointLight.position.set(0, 2.6, 0);
-  scene.add(holoPointLight);
+  const shopInteriorLight = new THREE.PointLight(WARM, 6, 6, 2);
+  shopInteriorLight.position.set(-3.4, 0.4, 0.2);
+  scene.add(shopInteriorLight);
 
-  // ---- Ground reflective-ish surface (the desk) ----
-  const groundMat = new THREE.MeshStandardMaterial({ color: 0x0d0d0a, roughness: 0.55, metalness: 0.5 });
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(30, 64), groundMat);
+  // ---------- Ground ----------
+  const ground = new THREE.Mesh(
+    new THREE.CircleGeometry(40, 64),
+    new THREE.MeshStandardMaterial({ color: 0x0b0c12, roughness: 0.6, metalness: 0.55 })
+  );
   ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -1.15;
+  ground.position.y = -1.2;
   scene.add(ground);
 
-  // ---- Procedural key builder (fallback + shape reference) ----
-  function buildKeyGeometryGroup() {
-    const g = new THREE.Group();
-    // Bow (ring/handle)
-    const bow = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.17, 24, 64));
-    bow.position.set(0, 1.35, 0);
-    g.add(bow);
-    // inner decorative ring
-    const bow2 = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.07, 18, 48));
-    bow2.position.set(0, 1.35, 0);
-    g.add(bow2);
-    // Shaft
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 2.5, 24));
-    shaft.position.set(0, -0.05, 0);
-    g.add(shaft);
-    // Collar
-    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.18, 24));
-    collar.position.set(0, 0.55, 0);
-    g.add(collar);
-    // Tip
-    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.14, 20, 20));
-    tip.position.set(0, -1.32, 0);
-    g.add(tip);
-    // Teeth (bit)
-    const toothDims = [[0.34, 0.26], [0.5, 0.22], [0.28, 0.22]];
-    let ty = -0.55;
-    toothDims.forEach(([w, h]) => {
-      const t = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.16));
-      t.position.set(0.13 + w / 2, ty, 0);
-      g.add(t);
-      ty -= (h + 0.12);
-    });
-    return g;
+  // ============================================================
+  // 1) PHYSICAL STOREFRONT (left, warm)
+  // ============================================================
+  const shop = new THREE.Group();
+  shop.position.set(-3.5, -1.2, 0);
+  scene.add(shop);
+
+  const brickMat  = new THREE.MeshStandardMaterial({ color: 0x8a5a3c, roughness: 0.85, metalness: 0.05 });
+  const trimMat   = new THREE.MeshStandardMaterial({ color: 0x6f4630, roughness: 0.8 });
+  const doorMat   = new THREE.MeshStandardMaterial({ color: 0x3a2418, roughness: 0.6, metalness: 0.1 });
+  const glowGlass = new THREE.MeshStandardMaterial({ color: WARM, emissive: WARM, emissiveIntensity: 1.4, roughness: 0.3, transparent: true, opacity: 0.92 });
+  const awningMat = new THREE.MeshStandardMaterial({ color: 0x9c3b34, roughness: 0.7 });
+
+  // body
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.4, 2.0), brickMat);
+  body.position.y = 1.2;
+  shop.add(body);
+
+  // roof trim
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(2.85, 0.3, 2.25), trimMat);
+  roof.position.y = 2.5;
+  shop.add(roof);
+
+  // pitched roof top
+  const roofTop = new THREE.Mesh(new THREE.ConeGeometry(2.0, 0.9, 4), trimMat);
+  roofTop.position.y = 3.05;
+  roofTop.rotation.y = Math.PI / 4;
+  roofTop.scale.set(1.15, 1, 0.9);
+  shop.add(roofTop);
+
+  // door
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.4, 0.12), doorMat);
+  door.position.set(-0.6, 0.7, 1.01);
+  shop.add(door);
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 12), new THREE.MeshStandardMaterial({ color: GOLD, metalness: 1, roughness: 0.3, emissive: GOLD_DEEP, emissiveIntensity: 0.3 }));
+  knob.position.set(-0.32, 0.7, 1.08);
+  shop.add(knob);
+
+  // window (warm glowing interior)
+  const winFrame = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.0, 0.12), trimMat);
+  winFrame.position.set(0.55, 0.95, 1.0);
+  shop.add(winFrame);
+  const winGlass = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 0.82), glowGlass);
+  winGlass.position.set(0.55, 0.95, 1.07);
+  shop.add(winGlass);
+  // muntins
+  const muntMat = trimMat;
+  const mV = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.82, 0.04), muntMat); mV.position.set(0.55, 0.95, 1.09); shop.add(mV);
+  const mH = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.04, 0.04), muntMat); mH.position.set(0.55, 0.95, 1.09); shop.add(mH);
+
+  // awning
+  const awning = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.12, 0.7), awningMat);
+  awning.position.set(0, 1.75, 1.35);
+  awning.rotation.x = 0.32;
+  shop.add(awning);
+
+  // small sign board (blank, no text per requirement)
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.4, 0.1), new THREE.MeshStandardMaterial({ color: 0x2a1c14, roughness: 0.6, emissive: WARM, emissiveIntensity: 0.15 }));
+  sign.position.set(0, 2.2, 1.12);
+  shop.add(sign);
+
+  // ============================================================
+  // 2) HOLOGRAPHIC WEBSITE / BROWSER (right, cyan)
+  // ============================================================
+  const holo = new THREE.Group();
+  holo.position.set(3.7, 1.5, 0);
+  scene.add(holo);
+
+  const lineMat  = new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending });
+  const fillMat  = new THREE.MeshBasicMaterial({ color: CYAN_SOFT, transparent: true, opacity: 0.08, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false });
+  const uiMat    = new THREE.MeshBasicMaterial({ color: CYAN, transparent: true, opacity: 0.45, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false });
+  const uiSoft   = new THREE.MeshBasicMaterial({ color: CYAN_SOFT, transparent: true, opacity: 0.28, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false });
+
+  const W = 3.0, H = 2.1;
+
+  function wireRect(w, h, mat) {
+    const hw = w/2, hh = h/2;
+    const g = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-hw,-hh,0), new THREE.Vector3(hw,-hh,0),
+      new THREE.Vector3(hw,hh,0), new THREE.Vector3(-hw,hh,0), new THREE.Vector3(-hw,-hh,0)
+    ]);
+    return new THREE.Line(g, mat);
   }
 
-  function applyMaterial(group, material) {
-    group.traverse((c) => { if (c.isMesh) c.material = material; });
-    return group;
+  // outer browser frame
+  holo.add(wireRect(W, H, lineMat));
+  // translucent panel behind
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(W, H), fillMat);
+  panel.position.z = -0.02;
+  holo.add(panel);
+
+  // top browser bar
+  const barY = H/2 - 0.22;
+  const topBar = wireRect(W, 0.44, lineMat); topBar.position.y = H/2 - 0.22; holo.add(topBar);
+  // traffic-light dots
+  [-1].forEach(()=>{});
+  for (let i=0;i<3;i++){
+    const dot = new THREE.Mesh(new THREE.CircleGeometry(0.05, 16), uiMat);
+    dot.position.set(-W/2 + 0.22 + i*0.18, barY, 0.01);
+    holo.add(dot);
+  }
+  // url bar
+  const urlBar = new THREE.Mesh(new THREE.PlaneGeometry(W*0.55, 0.16), uiSoft);
+  urlBar.position.set(0.25, barY, 0.01);
+  holo.add(urlBar);
+
+  // nav row
+  const navY = H/2 - 0.6;
+  for (let i=0;i<4;i++){
+    const nav = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.08), uiMat);
+    nav.position.set(-W/2 + 0.5 + i*0.6, navY, 0.01);
+    holo.add(nav);
   }
 
-  // Golden material
-  const goldMat = new THREE.MeshStandardMaterial({
-    color: GOLD, metalness: 1.0, roughness: 0.28,
-    emissive: GOLD_DEEP, emissiveIntensity: 0.12
+  // hero image block (big circle-ish / rounded rect)
+  const heroImg = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.9), uiSoft);
+  heroImg.position.set(-W/2 + 0.85, -0.05, 0.01);
+  holo.add(heroImg);
+  const heroRing = new THREE.Mesh(new THREE.RingGeometry(0.28, 0.32, 32), uiMat);
+  heroRing.position.set(-W/2 + 0.85, -0.05, 0.02);
+  holo.add(heroRing);
+
+  // text blocks (lines) on right column
+  const textBlocks = [];
+  for (let i=0;i<5;i++){
+    const wv = 1.1 - (i%3)*0.18;
+    const tb = new THREE.Mesh(new THREE.PlaneGeometry(wv, 0.075), i%4===0 ? uiMat : uiSoft);
+    tb.position.set(0.55, 0.35 - i*0.2, 0.01);
+    holo.add(tb);
+    textBlocks.push(tb);
+  }
+  // CTA button
+  const cta = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.18), uiMat);
+  cta.position.set(0.35, -0.75, 0.02);
+  holo.add(cta);
+  holo.add((()=>{ const r = wireRect(0.7,0.18,lineMat); r.position.set(0.35,-0.75,0.03); return r; })());
+
+  // subtle depth: a second faint frame behind
+  const ghost = wireRect(W, H, new THREE.LineBasicMaterial({ color: CYAN_SOFT, transparent:true, opacity:0.25, blending: THREE.AdditiveBlending }));
+  ghost.position.z = -0.35; ghost.scale.set(0.96,0.96,1);
+  holo.add(ghost);
+
+  const holoInner = []; holo.traverse(o=>{ if(o.isMesh||o.isLine) holoInner.push(o); });
+
+  // ============================================================
+  // 4) GOLDEN KEY (center, between shop and website)
+  // ============================================================
+  const key = new THREE.Group();
+  key.position.set(0, 0.9, 0.4);
+  scene.add(key);
+
+  const keyMat = new THREE.MeshStandardMaterial({ color: GOLD, metalness: 1.0, roughness: 0.26, emissive: GOLD_DEEP, emissiveIntensity: 0.35 });
+
+  // bow (ring handle)
+  const bow = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.08, 20, 48), keyMat);
+  bow.position.y = 0.62; key.add(bow);
+  const bowInner = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.035, 16, 40), keyMat);
+  bowInner.position.y = 0.62; key.add(bowInner);
+  // shaft
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.15, 20), keyMat);
+  shaft.position.y = -0.02; key.add(shaft);
+  // collar
+  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.08, 20), keyMat);
+  collar.position.y = 0.28; key.add(collar);
+  // tip
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.065, 16, 16), keyMat);
+  tip.position.y = -0.6; key.add(tip);
+  // teeth
+  [[0.16,0.12],[0.24,0.1],[0.14,0.1]].forEach(([w,h],i)=>{
+    const t = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.07), keyMat);
+    t.position.set(0.06 + w/2, -0.32 - i*0.16, 0);
+    key.add(t);
   });
+  key.rotation.z = 0.15;
 
-  // Holographic material (glowing translucent)
-  const holoMat = new THREE.MeshStandardMaterial({
-    color: CYAN, emissive: CYAN, emissiveIntensity: 2.6,
-    metalness: 0.1, roughness: 0.3, transparent: true, opacity: 0.55,
-    depthWrite: false, blending: THREE.AdditiveBlending
-  });
-  const holoWireMat = new THREE.MeshBasicMaterial({
-    color: CYAN_SOFT, wireframe: true, transparent: true, opacity: 0.9,
-    blending: THREE.AdditiveBlending, depthWrite: false
-  });
+  // ============================================================
+  // 3) TRANSFORMATION PARTICLES (storefront -> website)
+  // ============================================================
+  const SHOP_SRC = new THREE.Vector3(-3.3, 0.9, 0.3);
+  const WEB_DST  = new THREE.Vector3(3.5, 1.5, 0.1);
 
-  // Containers
-  const goldenKey = new THREE.Group();      // sits on desk
-  const holoKey = new THREE.Group();         // floats above
-  scene.add(goldenKey, holoKey);
-
-  goldenKey.position.set(0, -0.55, 0);
-  goldenKey.rotation.z = -Math.PI / 2 + 0.12; // lie mostly flat / tilted
-  goldenKey.rotation.x = -0.35;
-  goldenKey.scale.setScalar(1.05);
-
-  holoKey.position.set(0, 2.5, 0);
-  holoKey.scale.setScalar(1.15);
-
-  // ---- Try loading real Tripo3D GLBs, else procedural fallback ----
-  const gltfLoader = new GLTFLoader();
-  let assetsToLoad = 2, assetsDone = 0;
-  function markDone() {
-    assetsDone++;
-    if (assetsDone >= assetsToLoad) loaderEl.classList.add('hidden');
-  }
-
-  function fitInto(container, object, targetHeight) {
-    const box = new THREE.Box3().setFromObject(object);
-    const size = new THREE.Vector3(); box.getSize(size);
-    const center = new THREE.Vector3(); box.getCenter(center);
-    object.position.sub(center);
-    const maxDim = Math.max(size.x, size.y, size.z) || 1;
-    object.scale.multiplyScalar(targetHeight / maxDim);
-    container.add(object);
-  }
-
-  // Golden key: GLB or procedural
-  gltfLoader.load('models/golden-key.glb',
-    (gltf) => {
-      const m = gltf.scene;
-      m.traverse((c) => { if (c.isMesh) { c.material.metalness = 1.0; c.material.roughness = 0.3; } });
-      fitInto(goldenKey, m, 3.2);
-      markDone();
-    },
-    undefined,
-    () => { // fallback
-      const g = applyMaterial(buildKeyGeometryGroup(), goldMat);
-      goldenKey.add(g);
-      markDone();
-    }
-  );
-
-  // Holographic key: GLB or procedural
-  gltfLoader.load('models/holo-key.glb',
-    (gltf) => {
-      const m = gltf.scene;
-      const wire = m.clone(true);
-      m.traverse((c) => { if (c.isMesh) c.material = holoMat; });
-      wire.traverse((c) => { if (c.isMesh) c.material = holoWireMat; });
-      const wrap = new THREE.Group(); wrap.add(m, wire);
-      fitInto(holoKey, wrap, 2.8);
-      markDone();
-    },
-    undefined,
-    () => {
-      const solid = applyMaterial(buildKeyGeometryGroup(), holoMat);
-      const wire = applyMaterial(buildKeyGeometryGroup(), holoWireMat);
-      holoKey.add(solid, wire);
-      markDone();
-    }
-  );
-
-  // Safety: hide loader after 6s no matter what
-  setTimeout(() => loaderEl.classList.add('hidden'), 6000);
-
-  // ---- Particles: gold + cyan drifting upward ----
-  function makeParticles(count, color, spread, size, speed) {
+  function makeStream(count, color, size, colorMix) {
     const geo = new THREE.BufferGeometry();
     const pos = new Float32Array(count * 3);
-    const vel = new Float32Array(count);
-    for (let i = 0; i < count; i++) {
-      pos[i*3]   = (Math.random() - 0.5) * spread;
-      pos[i*3+1] = (Math.random() - 0.5) * spread * 0.8;
-      pos[i*3+2] = (Math.random() - 0.5) * spread;
-      vel[i] = 0.15 + Math.random() * speed;
+    const prog = new Float32Array(count);
+    const speed = new Float32Array(count);
+    const off = new Float32Array(count * 3);
+    for (let i=0;i<count;i++){
+      prog[i] = Math.random();
+      speed[i] = 0.06 + Math.random()*0.10;
+      off[i*3]   = (Math.random()-0.5)*0.5;
+      off[i*3+1] = (Math.random()-0.5)*1.3 + 0.3;
+      off[i*3+2] = (Math.random()-0.5)*0.9;
+      pos[i*3]=0;pos[i*3+1]=0;pos[i*3+2]=0;
     }
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const mat = new THREE.PointsMaterial({
-      color, size, transparent: true, opacity: 0.75,
-      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true
-    });
+    geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+    const mat = new THREE.PointsMaterial({ color, size, transparent:true, opacity:0.85, blending:THREE.AdditiveBlending, depthWrite:false, sizeAttenuation:true });
     const pts = new THREE.Points(geo, mat);
-    pts.userData.vel = vel;
-    pts.userData.spread = spread;
+    pts.userData = { prog, speed, off, count };
     scene.add(pts);
     return pts;
   }
-  const goldParticles = makeParticles(260, GOLD, 16, 0.05, 0.5);
-  const cyanParticles = makeParticles(200, CYAN, 14, 0.045, 0.7);
+  const goldStream = makeStream(320, GOLD, 0.06);
+  const cyanStream = makeStream(280, CYAN, 0.055);
 
-  function updateParticles(pts, dt) {
+  const _a = new THREE.Vector3(), _b = new THREE.Vector3();
+  function updateStream(pts, dt) {
+    const { prog, speed, off, count } = pts.userData;
     const p = pts.geometry.attributes.position;
-    const vel = pts.userData.vel;
-    const s = pts.userData.spread;
-    for (let i = 0; i < p.count; i++) {
-      let y = p.getY(i) + vel[i] * dt;
-      if (y > s * 0.5) y = -s * 0.5;
-      p.setY(i, y);
+    for (let i=0;i<count;i++){
+      prog[i] += speed[i]*dt;
+      if (prog[i] > 1) prog[i] -= 1;
+      const t = prog[i];
+      // arc: lerp source->dest with an upward parabola
+      _a.copy(SHOP_SRC); _b.copy(WEB_DST);
+      const x = _a.x + (_b.x-_a.x)*t + off[i*3]*(1-Math.abs(0.5-t)*2)*0.6;
+      const arc = Math.sin(t*Math.PI)*1.1;
+      const y = _a.y + (_b.y-_a.y)*t + arc + off[i*3+1]*0.15;
+      const z = _a.z + (_b.z-_a.z)*t + off[i*3+2]*(1-Math.abs(0.5-t)*2);
+      p.setXYZ(i, x, y, z);
     }
     p.needsUpdate = true;
   }
 
-  // ---- Post-processing bloom ----
+  // ---------- Post-processing bloom ----------
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.9, 0.55, 0.18);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(1,1), 0.85, 0.5, 0.2);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
-  // ---- Mouse parallax ----
-  const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
-  window.addEventListener('pointermove', (e) => {
+  // ---------- Mouse parallax ----------
+  const mouse = { x:0, y:0, tx:0, ty:0 };
+  window.addEventListener('pointermove', (e)=>{
     mouse.tx = (e.clientX / window.innerWidth - 0.5) * 2;
     mouse.ty = (e.clientY / window.innerHeight - 0.5) * 2;
   });
-  window.addEventListener('mouseleave', () => { mouse.tx = 0; mouse.ty = 0; });
+  window.addEventListener('mouseleave', ()=>{ mouse.tx=0; mouse.ty=0; });
 
-  // ---- Resize ----
-  function resize() {
+  // ---------- Resize ----------
+  function resize(){
     const w = window.innerWidth, h = window.innerHeight;
-    renderer.setSize(w, h, false);
-    composer.setSize(w, h);
-    bloom.setSize(w, h);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
+    renderer.setSize(w,h,false);
+    composer.setSize(w,h);
+    bloom.setSize(w,h);
+    camera.aspect = w/h; camera.updateProjectionMatrix();
   }
   window.addEventListener('resize', resize);
   resize();
 
-  // ---- Animation loop ----
+  loaderEl.classList.add('hidden');
+
+  // ---------- Animate ----------
   const clock = new THREE.Clock();
-  function animate() {
+  function animate(){
     requestAnimationFrame(animate);
     const dt = Math.min(clock.getDelta(), 0.05);
     const t = clock.elapsedTime;
 
-    // Holographic key idle: rotate + bob
-    holoKey.rotation.y += dt * 0.6;
-    holoKey.position.y = 2.5 + Math.sin(t * 1.3) * 0.22;
-    holoPointLight.position.y = holoKey.position.y;
-    holoPointLight.intensity = 5 + Math.sin(t * 3) * 1.5;
+    // key slow rotation on its axis + glow pulse
+    key.rotation.y += dt * 0.9;
+    keyGlowLight.intensity = 7 + Math.sin(t*2.2)*2;
 
-    // Golden key subtle shimmer rotation
-    goldenKey.rotation.y = Math.sin(t * 0.25) * 0.15;
+    // holographic website breathe/pulse
+    const pulse = 0.5 + Math.sin(t*1.6)*0.5;
+    holoInner.forEach(o=>{
+      if (o.material && o.material.opacity !== undefined) {
+        const base = o.material.userData?.base ?? (o.material.userData = { base: o.material.opacity }, o.material.opacity);
+      }
+    });
+    holo.scale.setScalar(1 + Math.sin(t*1.6)*0.012);
+    holo.position.y = 1.5 + Math.sin(t*1.1)*0.06;
+    coolSpot.intensity = 90 + pulse*35;
 
-    // Particles
-    updateParticles(goldParticles, dt);
-    updateParticles(cyanParticles, dt);
+    // particle streams
+    updateStream(goldStream, dt);
+    updateStream(cyanStream, dt);
 
-    // Mouse parallax (smoothed)
+    // mouse parallax + idle bob
     mouse.x += (mouse.tx - mouse.x) * 0.05;
     mouse.y += (mouse.ty - mouse.y) * 0.05;
-    camera.position.x = CAM_BASE.x + mouse.x * 1.1;
-    camera.position.y = CAM_BASE.y - mouse.y * 0.7;
-    camera.lookAt(0, 0.9, 0);
+    camera.position.x = CAM_BASE.x + mouse.x * 1.25;
+    camera.position.y = CAM_BASE.y - mouse.y * 0.8 + Math.sin(t*0.6)*0.08;
+    camera.position.z = CAM_BASE.z + Math.sin(t*0.4)*0.12;
+    camera.lookAt(LOOK);
 
     composer.render();
   }
