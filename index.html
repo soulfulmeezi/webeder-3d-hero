@@ -8,19 +8,19 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
     width: 100%; height: 100%; overflow: hidden;
-    background: radial-gradient(ellipse at 50% 45%, #12131c 0%, #0a0b12 55%, #05060a 100%);
+    background: radial-gradient(ellipse at 50% 45%, #3A3A2A 0%, #2C2C1E 55%, #1A1A12 100%);
     font-family: system-ui, sans-serif;
   }
   #scene { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
   #loader {
     position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-    color: #D4A573; letter-spacing: 3px; font-size: 12px; text-transform: uppercase;
+    color: #D4A574; letter-spacing: 3px; font-size: 12px; text-transform: uppercase;
     transition: opacity 0.8s ease; z-index: 5; pointer-events: none;
   }
   #loader.hidden { opacity: 0; }
   .ring {
     width: 34px; height: 34px; margin-right: 14px; border-radius: 50%;
-    border: 2px solid rgba(212,165,115,0.25); border-top-color: #D4A573;
+    border: 2px solid rgba(212,165,116,0.25); border-top-color: #D4A574;
     animation: spin 0.9s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -47,12 +47,12 @@
   import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
   // ---------- Palette (Webeder brand) ----------
-  const GOLD      = 0xD4A573;
-  const GOLD_DEEP = 0xb8860b;
-  const WARM      = 0xffb45a;
-  const CYAN      = 0x3fe0ff;
-  const CYAN_SOFT = 0x2ec9ff;
-  const BG        = 0x05060a;
+  const GOLD      = 0xD4A574;
+  const GOLD_DEEP = 0x8c6b42;
+  const WARM      = 0xe6ab7e;
+  const CYAN      = 0xD4A574; // Sandy/peach tan instead of cyan
+  const CYAN_SOFT = 0xC9956B; // Warm sandy tan instead of cyan
+  const BG        = 0x1A1A12; // Dark olive-brown background
 
   const canvas = document.getElementById('scene');
   const loaderEl = document.getElementById('loader');
@@ -74,7 +74,7 @@
   camera.lookAt(LOOK);
 
   // ---------- Lighting: warm gold (left/physical) + cool cyan (right/digital) ----------
-  scene.add(new THREE.AmbientLight(0x1c2030, 0.9));
+  scene.add(new THREE.AmbientLight(0x2a2b1d, 0.95)); // Earthy ambient light
 
   const warmSpot = new THREE.SpotLight(WARM, 120, 45, Math.PI / 5, 0.55, 1.3);
   warmSpot.position.set(-6, 7, 5);
@@ -97,7 +97,7 @@
   // ---------- Ground ----------
   const ground = new THREE.Mesh(
     new THREE.CircleGeometry(40, 64),
-    new THREE.MeshStandardMaterial({ color: 0x0b0c12, roughness: 0.6, metalness: 0.55 })
+    new THREE.MeshStandardMaterial({ color: 0x151610, roughness: 0.6, metalness: 0.55 })
   );
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -1.2;
@@ -114,7 +114,7 @@
   const trimMat   = new THREE.MeshStandardMaterial({ color: 0x6f4630, roughness: 0.8 });
   const doorMat   = new THREE.MeshStandardMaterial({ color: 0x3a2418, roughness: 0.6, metalness: 0.1 });
   const glowGlass = new THREE.MeshStandardMaterial({ color: WARM, emissive: WARM, emissiveIntensity: 1.4, roughness: 0.3, transparent: true, opacity: 0.92 });
-  const awningMat = new THREE.MeshStandardMaterial({ color: 0x9c3b34, roughness: 0.7 });
+  const awningMat = new THREE.MeshStandardMaterial({ color: 0x4A4A3A, roughness: 0.7 });
 
   // body
   const body = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.4, 2.0), brickMat);
